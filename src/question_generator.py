@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import streamlit as st
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
@@ -35,7 +36,7 @@ class QuestionGenerator:
         temperature: float = 0.7
     ):
 
-        api_key = os.getenv("GOOGLE_API_KEY")
+        api_key = st.secrets["GOOGLE_API_KEY"]
         if not api_key:
             logger.error("GOOGLE_API_KEY not found in environment variables.")
             raise ValueError("GOOGLE_API_KEY is required for QuestionGenerator")

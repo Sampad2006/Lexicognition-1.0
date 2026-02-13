@@ -2,6 +2,7 @@ import json
 import re
 import os
 import logging
+import streamlit as st
 from typing import Dict, Any, List
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -37,7 +38,7 @@ class StrictAnswerGrader:
         Initializes the Grader using Google's API for LLM tasks and 
         local CPU-based embeddings for similarity guardrails.
         """
-        api_key = os.getenv("GOOGLE_API_KEY")
+        api_key = st.secrets["GOOGLE_API_KEY"]
         if not api_key:
             logger.error("GOOGLE_API_KEY not found.")
             raise ValueError("GOOGLE_API_KEY is required for StrictAnswerGrader")
