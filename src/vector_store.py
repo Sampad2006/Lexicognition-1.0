@@ -31,9 +31,11 @@ class VectorStoreManager:
         self.persist_directory = persist_directory
         self.collection_name = collection_name
         
+        # NEW: Explicitly create the database directory structure
+        os.makedirs(self.persist_directory, exist_ok=True) #
+        
         logger.info(f"Initializing VectorStoreManager with model: {embedding_model_name}")
         
-
         current_dir = os.path.dirname(os.path.abspath(__file__))
         cache_dir = os.path.join(current_dir, "..", "persistent_storage", "model_cache")
         os.makedirs(cache_dir, exist_ok=True)
