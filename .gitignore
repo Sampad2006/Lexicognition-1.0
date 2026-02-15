@@ -6,6 +6,7 @@ pyvenv.cfg
 
 # Secrets and Environment Variables (CRITICAL)
 .env
+.streamlit
 
 # Python cache files
 __pycache__/
