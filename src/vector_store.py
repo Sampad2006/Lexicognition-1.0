@@ -27,7 +27,6 @@ class VectorStoreManager:
     def __init__(
         self,
         session_id: str,
-        persist_directory: str = "./persistent_storage/chroma_db",
         embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         collection_name: str = "pdf_documents"
     ):
