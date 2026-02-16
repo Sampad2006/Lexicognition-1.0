@@ -53,6 +53,7 @@ class VectorStoreManager:
         os.makedirs(self.persist_directory, exist_ok=True)
         
         # Use a separate cache for models to avoid permission issues in the source tree
+        current_dir = os.path.dirname(os.path.abspath(__file__))
         cache_dir = os.path.join(tempfile.gettempdir(), "model_cache")
         os.makedirs(cache_dir, exist_ok=True)
         
