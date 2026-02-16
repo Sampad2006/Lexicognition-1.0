@@ -27,6 +27,9 @@ if "current_question" not in st.session_state:
     st.session_state.current_question = None
 if "last_feedback" not in st.session_state:
     st.session_state.last_feedback = None
+if "session_id" not in st.session_state:
+    import uuid
+    st.session_state.session_id = str(uuid.uuid4())
 
 
 st.title(" Lexicognition 1.0")
@@ -60,6 +63,7 @@ with st.sidebar:
             st.write("Generating embeddings & updating Vector DB..")
            
             vector_manager = VectorStoreManager(
+                session_id=st.session_state.session_id,
                 persist_directory="./persistent_storage/chroma_db"
             )
             st.session_state.retriever = vector_manager.create_vector_store(
