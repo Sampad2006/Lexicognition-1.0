@@ -38,11 +38,11 @@ if "last_feedback" not in st.session_state:
     st.session_state.last_feedback = None
 
 st.title("Lexicognition 1.0")
-st.subheader("AI-Powered Research Paper Interviewer")
+st.subheader("Research Paper Interviewer")
 st.markdown("---")
 
 with st.sidebar:
-    st.header("1. Document Ingestion")
+    st.header("Document Ingestion")
     uploaded_file = st.file_uploader("Upload PDF", type="pdf")
     
     difficulty = st.selectbox(
