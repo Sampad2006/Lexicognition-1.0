@@ -63,8 +63,7 @@ with st.sidebar:
             st.write("Generating embeddings & updating Vector DB..")
            
             vector_manager = VectorStoreManager(
-                session_id=st.session_state.session_id,
-                persist_directory="./persistent_storage/chroma_db"
+                session_id=st.session_state.session_id
             )
             st.session_state.retriever = vector_manager.create_vector_store(
                 chunks=chunks,
