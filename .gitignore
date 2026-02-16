@@ -1,28 +1,24 @@
-# Python virtual environments
+
 .venv/
 venv/
 ENV/
 pyvenv.cfg
 
-# Secrets and Environment Variables (CRITICAL)
+
 .env
 .streamlit/
 
-# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
 
 # Local data and persistent storage
-# (Assuming these contain local test data or SQLite DBs)
 data/
 persistent_storage/
 persistent-storage/
 
-# macOS system files
-.DS_Store
 
-# Distribution / Build
+.DS_Store
 dist/
 build/
 *.egg-info/

@@ -31,7 +31,7 @@ class VectorStoreManager:
         self.persist_directory = persist_directory
         self.collection_name = collection_name
         
-        # NEW: Explicitly create the database directory structure
+        # explicitly creating the database directory structure for st cloud search issue
         os.makedirs(self.persist_directory, exist_ok=True) #
         
         logger.info(f"Initializing VectorStoreManager with model: {embedding_model_name}")
@@ -115,6 +115,8 @@ class VectorStoreManager:
         
         self.clear_database()
         
+        os.makedirs(self.persist_directory, exist_ok=True) #reinitializing for st cloud environment 
+
         logger.info(f"Creating new vector store from {len(chunks)} document chunks...")
         
         try:

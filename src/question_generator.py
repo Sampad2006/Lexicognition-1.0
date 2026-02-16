@@ -12,7 +12,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 
-# Load environment variables from .env file
+# Load environment variables from .env file /streamlit secrets in cloud
 load_dotenv()
 
 # Configure logging
