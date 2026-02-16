@@ -28,7 +28,7 @@ class VectorStoreManager:
         embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         collection_name: str = "pdf_documents"
     ):
-        self.persist_directory = persist_directory
+        self.persist_directory = os.path.abspath(persist_directory)
         self.collection_name = collection_name
         
         # explicitly creating the database directory structure for st cloud search issue
