@@ -22,3 +22,5 @@ persistent-storage/
 dist/
 build/
 *.egg-info/
+# testing redis connection
+testredis.py
