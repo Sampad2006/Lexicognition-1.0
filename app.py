@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import tempfile
-import uuid  # <--- Added this
+import uuid  
 from dotenv import load_dotenv
 
 try:
@@ -24,7 +24,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Initialize Session ID First ---
+#new session id
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
@@ -47,7 +47,7 @@ with st.sidebar:
     
     difficulty = st.selectbox(
         "Difficulty",
-        options=["Basic (Noob)", "Intermediate", "Advanced"],
+        options=["Basic (Noob)", "Intermediate", "Advanced(Smart huh?)"],
         index=1
     )
     
@@ -65,7 +65,7 @@ with st.sidebar:
             
             st.write("Generating embeddings & updating Vector DB...")
             
-            # --- FIX: Pass the session_id to the manager ---
+            #  Pass the session_id to the manager ---
             vector_manager = VectorStoreManager(
                 session_id=st.session_state.session_id
             )

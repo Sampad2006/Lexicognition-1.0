@@ -12,6 +12,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
+from src.utils import LLMLoadBalancer
 
 # Load environment variables
 load_dotenv()
@@ -25,37 +26,27 @@ logger = logging.getLogger(__name__)
 
 class StrictAnswerGrader:
     """
-    A multi-step grader using Gemma 3 to provide robust, cheat-resistant 
+    multi-step grader using Gemma/Gemini to provide robust, cheat-resistant 
     evaluation of user answers against source PDF content.
     """
     
     def __init__(
         self,
-        model_name: str = "gemma-3-27b-it", # Update to gemma3 when available
-        temperature: float = 0.1  # after some "intellectual" testing
+        model_name: str = "gemma-3-27b-it", 
+        temperature: float = 0.1 
     ):
         """
-        Initializes the Grader using Google's API for LLM tasks and 
-        local CPU-based embeddings for similarity guardrails.
+        Initializes the Grader with the Load Balancer and embedding model.
         """
-        api_key = st.secrets["GOOGLE_API_KEY"]
-        if not api_key:
-            logger.error("GOOGLE_API_KEY not found.")
-            raise ValueError("GOOGLE_API_KEY is required for StrictAnswerGrader")
-
-        logger.info(f"Initializing StrictAnswerGrader with model: {model_name}")
+        self.model_name = model_name
+        self.temperature = temperature
         
-        # 1. Initialize Google LLM
-        self.llm = ChatGoogleGenerativeAI(
-            model=model_name,
-            google_api_key=api_key,
-            temperature=temperature,
-            convert_system_message_to_human=True
-        )
+        # 1. Initialize the Load Balancer for the API Pool
+        self.balancer = LLMLoadBalancer()
 
-        # 2. Initialize local Embedding Model (Same as VectorStore for consistency)
+        # 2. Initialize local Embedding Model
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        cache_dir = os.path.join(current_dir, "..", "persistent_storage", "model_cache")
+        cache_dir = os.path.join(current_dir,"..","persistent_storage","model_cache")
         
         self.embedding_model = HuggingFaceEmbeddings(
             model_name="sentence-transformers/all-MiniLM-L6-v2",
@@ -63,16 +54,13 @@ class StrictAnswerGrader:
             model_kwargs={'device': 'cpu'},
             encode_kwargs={'normalize_embeddings': True}
         )
-        logger.info("✓ Grader API client and local embedding model ready.")
+        logger.info(f"✓ Grader initialized with model {model_name} and local embeddings.")
 
     def _calculate_semantic_similarity(self, text1: str, text2: str) -> float:
-        """Calculates cosine similarity to detect question rephrasing."""
+        """Calculates cosine similarity to detect question rephrasing attempts. """
         try:
-            # We use embed_query for single strings
             emb1 = np.array(self.embedding_model.embed_query(text1))
             emb2 = np.array(self.embedding_model.embed_query(text2))
-            
-            # Reshape for sklearn and calculate
             similarity = cosine_similarity(emb1.reshape(1, -1), emb2.reshape(1, -1))[0][0]
             return float(similarity)
         except Exception as e:
@@ -80,7 +68,7 @@ class StrictAnswerGrader:
             return 0.0
 
     def _clean_json_response(self, content: str) -> str:
-        """Helper to strip markdown blocks from API responses."""
+        """ Helper to strip markdown blocks from API responses. """
         if "```json" in content:
             return content.split("```json")[1].split("```")[0].strip()
         elif "```" in content:
@@ -89,7 +77,17 @@ class StrictAnswerGrader:
 
     def _perform_novelty_analysis(self, question: str, user_answer: str, context: str) -> Dict[str, Any]:
         """Step 1: Determine if the answer provides new info or just rephrases the question."""
-        logger.info("Step 1: Performing novelty and relevance analysis...")
+        logger.info("Step 1: Performing novelty analysis...")
+        
+        # key from pool
+        api_key = self.balancer.get_next_available_key()
+        
+        llm = ChatGoogleGenerativeAI(
+            model=self.model_name,
+            google_api_key=api_key,
+            temperature=self.temperature,
+            convert_system_message_to_human=True
+        )
         
         prompt = [
             SystemMessage(content="You are a strict relevance filter. Your ONLY job is to determine if the user's answer is a DIRECT response using NEW information from the context."),
@@ -99,7 +97,7 @@ class StrictAnswerGrader:
                 **FAIRNESS RULES:**
                 1. **Concept over Keywords:** If the user explains the correct mechanism using their own words, mark as TRUE.
                 2. **Direct Response:** Does the answer actually address the question? (TRUE if yes).
-                3. **Anti-Cheat:** Only mark as FALSE if the user is literally just repeating the question or providing common knowledge that has nothing to do with the specific context.
+                3. **Anti-Cheat:** Only mark as FALSE if the user is literally just repeating the question or providing common knowledge.
 
                 **SOURCE CONTEXT:** {context}
                 **QUESTION:** "{question}"
@@ -114,7 +112,7 @@ class StrictAnswerGrader:
         ]
         
         try:
-            response = self.llm.invoke(prompt)
+            response = llm.invoke(prompt)
             data = json.loads(self._clean_json_response(response.content))
             return data
         except Exception as e:
@@ -124,6 +122,15 @@ class StrictAnswerGrader:
     def _perform_final_grading(self, question: str, user_answer: str, novelty_reasoning: str) -> Dict[str, Any]:
         """Step 2: Assign a final score based on accuracy and detail."""
         logger.info("Step 2: Synthesizing final grade...")
+        
+        api_key = self.balancer.get_next_available_key()
+        
+        llm = ChatGoogleGenerativeAI(
+            model=self.model_name,
+            google_api_key=api_key,
+            temperature=self.temperature,
+            convert_system_message_to_human=True
+        )
         
         prompt = [
             SystemMessage(content="You are a technical professor grading a deep learning exam. Output ONLY valid JSON."),
@@ -135,24 +142,24 @@ class StrictAnswerGrader:
             **Context Summary:** {novelty_reasoning}
 
             **ACHIEVEMENT TIERS:**
-            - **MASTERED (Score 9-10):** The answer is technically accurate, complete, and clearly explains the 'how' or 'why'.
-            - **COMPETENT (Score 6-8):** The answer is correct on the main point but might be a bit brief or miss a secondary detail.
-            - **LEARNING (Score 1-5):** The user is on the right track but the explanation is vague or partially incorrect.
-            - **RE-ATTEMPT (Score 0):** The answer doesn't address the question at all or is just a rephrase.
+            - **MASTERED (Score 9-10):** The answer is technically accurate and explains 'how' or 'why'.
+            - **COMPETENT (Score 6-8):** Correct on main points but misses secondary details.
+            - **LEARNING (Score 1-5):** Vague or partially incorrect.
+            - **RE-ATTEMPT (Score 0):** Doesn't address the question or is just a rephrase.
 
            **Output JSON Schema:**
             {{
             "score": <int>,
             "tier": "<Mastered/Competent/Learning/Re-attempt>",
             "feedback": "<Encouraging feedback for the user>",
-            "reasoning": "<Explain your internal logic for why you chose this specific tier and score>",
+            "reasoning": "<Explain your internal logic>",
             "is_question_repetition": <bool>
             }}
         """)  
         ]
         
         try:
-            response = self.llm.invoke(prompt)
+            response = llm.invoke(prompt)
             return json.loads(self._clean_json_response(response.content))
         except Exception as e:
             logger.error(f"Final grading failed: {e}")
@@ -173,7 +180,7 @@ class StrictAnswerGrader:
                 "reasoning": f"Cosine similarity of {sim:.2f} exceeded the rephrase threshold."
             }
 
-        # 2. Retrieve Context
+        # 2. Retrieve Context (Local Vector Store - No Key Needed)
         docs = retriever.invoke(question)
         if not docs:
             return {"score": 0, "feedback": "No context found to verify answer."}
@@ -181,7 +188,7 @@ class StrictAnswerGrader:
         context = "\n\n".join([d.page_content for d in docs])
         evidence = [{"page": d.metadata.get("page", "N/A"), "content": d.page_content} for d in docs]
 
-        # 3. Novelty Check
+        # 3. Novelty Check (Requires API Key)
         novelty = self._perform_novelty_analysis(question, user_answer, context)
         if not novelty.get("provides_novel_information", False):
             return {
@@ -191,7 +198,7 @@ class StrictAnswerGrader:
                 "evidence": evidence
             }
 
-        # 4. Final Grade
+        # 4. Final Grade - llm
         result = self._perform_final_grading(question, user_answer, novelty.get("reasoning"))
         result["evidence"] = evidence
         

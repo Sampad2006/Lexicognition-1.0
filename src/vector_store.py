@@ -30,22 +30,7 @@ class VectorStoreManager:
         embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         collection_name: str = "pdf_documents"
     ):
-        # if persist_directory is None:
-        #     # This ensures a unique, writable folder for every run
-        #     persist_directory = os.path.join(tempfile.gettempdir(), "chroma_db")
-
-        # self.persist_directory = os.path.abspath(persist_directory)
-        # self.collection_name = collection_name
         
-        # # explicitly creating the database directory structure for st cloud search issue
-        # os.makedirs(self.persist_directory, exist_ok=True) #
-        
-        # logger.info(f"Initializing VectorStoreManager with model: {embedding_model_name}")
-        
-        # current_dir = os.path.dirname(os.path.abspath(__file__))
-        # cache_dir = os.path.join(current_dir, "..", "persistent_storage", "model_cache")
-        # os.makedirs(cache_dir, exist_ok=True)
-        # Create a unique path in /tmp for this specific session
         self.persist_directory = os.path.join(tempfile.gettempdir(), f"chroma_{session_id}")
         self.collection_name = collection_name
         
@@ -132,7 +117,7 @@ class VectorStoreManager:
         
         self.clear_database()
         
-        os.makedirs(self.persist_directory, exist_ok=True) #reinitializing for st cloud environment 
+        os.makedirs(self.persist_directory, exist_ok=True) # reinitializing for st cloud environment 
 
         logger.info(f"Creating new vector store from {len(chunks)} document chunks...")
         
